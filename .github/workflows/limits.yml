@@ -32,6 +32,11 @@ jobs:
           - { id: c50001, edges: 50, chars: 50001, comment: true }
           - { id: c60000, edges: 50, chars: 60000, comment: true }
           - { id: s100000, edges: 50, chars: 100000, comment: false }
+          - { id: c100000, edges: 50, chars: 100000, comment: true }
+          - { id: c200000, edges: 50, chars: 200000, comment: true }
+          - { id: c260000, edges: 50, chars: 260000, comment: true }
+          - { id: d500x200000, edges: 500, chars: 200000, comment: true }
+          - { id: s1100000, edges: 50, chars: 1100000, comment: false }
           - { id: s500000, edges: 50, chars: 500000, comment: false }
     steps:
       - uses: actions/checkout@v6
