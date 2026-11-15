@@ -1,0 +1,16 @@
+name: behold
+on: pull_request
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  draw:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: INTENTIUS/behold-action@main
+        with:
+          # @intentius/behold-graph is not on npm yet, so install the packed build from this repository's release.
+          behold-version: https://github.com/INTENTIUS/behold-sandbox/releases/download/behold-graph-0.32.0/intentius-behold-graph-0.32.0.tgz

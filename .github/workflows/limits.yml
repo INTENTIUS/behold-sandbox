@@ -1,0 +1,103 @@
+# Measures what GitHub renders and accepts, for behold's Mermaid budget
+# (INTENTIUS/behold#1065). Posts only to the pull request given as input, in
+# this repository. Nothing here touches Terraform.
+name: limits
+on:
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Pull request number that receives the test comments
+        required: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  mermaid:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { id: e0050, edges: 50, chars: 0, comment: true }
+          - { id: e0200, edges: 200, chars: 0, comment: true }
+          - { id: e0500, edges: 500, chars: 0, comment: true }
+          - { id: e0501, edges: 501, chars: 0, comment: true }
+          - { id: e1000, edges: 1000, chars: 0, comment: true }
+          - { id: c10000, edges: 50, chars: 10000, comment: true }
+          - { id: c30000, edges: 50, chars: 30000, comment: true }
+          - { id: c49000, edges: 50, chars: 49000, comment: true }
+          - { id: c50001, edges: 50, chars: 50001, comment: true }
+          - { id: c60000, edges: 50, chars: 60000, comment: true }
+          - { id: s100000, edges: 50, chars: 100000, comment: false }
+          - { id: s500000, edges: 50, chars: 500000, comment: false }
+    steps:
+      - uses: actions/checkout@v6
+      - name: Write the diagram to the job summary and a comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ inputs.pr }}
+          ID: ${{ matrix.id }}
+          EDGES: ${{ matrix.edges }}
+          CHARS: ${{ matrix.chars }}
+          POST: ${{ matrix.comment }}
+        run: |
+          set -eu
+          title="limits case ${ID}: ${EDGES} edges, mermaid source padded to ${CHARS} characters (0 means unpadded)"
+          node scripts/gen-mermaid.mjs "$EDGES" "$CHARS" "$title" > case.md 2> gen.log
+          cat gen.log
+          wc -c case.md
+          cat case.md >> "$GITHUB_STEP_SUMMARY"
+          if [ "$POST" = true ]; then
+            url=$(gh api "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" -F body=@case.md --jq .html_url)
+            echo "comment: $url"
+            echo "comment for ${ID}: $url" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  comment-size:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post bodies around 65,536 characters
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ inputs.pr }}
+        run: |
+          set -u
+          for n in 65535 65536 65537; do
+            node -e 'const n=Number(process.argv[1]);const head="size probe "+n+" characters\n";process.stdout.write(head+"x".repeat(n-head.length))' "$n" > body-$n.txt
+            echo "body $n: $(wc -c < body-$n.txt) bytes, $(node -e 'process.stdout.write(String(require("fs").readFileSync(process.argv[1],"utf8").length))' body-$n.txt) characters"
+            if out=$(gh api "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" -F body=@body-$n.txt 2>&1); then
+              echo "$n: accepted: $(echo "$out" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).html_url))')" | tee -a "$GITHUB_STEP_SUMMARY"
+            else
+              echo "$n: refused: $out" | tee -a "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+
+  attach:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Try gh pr comment --attach with the workflow token
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ inputs.pr }}
+        run: |
+          set -u
+          {
+            echo "gh version: $(gh --version | head -1)"
+            echo "attach flag in help: $(gh pr comment --help | grep -c -- '--attach' || true)"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          cat > probe.svg <<'SVG'
+          <svg xmlns="http://www.w3.org/2000/svg" width="120" height="40"><rect width="120" height="40" fill="#7c3aed"/><text x="10" y="25" fill="white" font-family="sans-serif">attach probe</text></svg>
+          SVG
+          # a 1x1 PNG
+          echo 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==' | base64 -d > probe.png
+          ls -l probe.svg probe.png
+          for f in probe.svg probe.png; do
+            if out=$(gh pr comment "$PR" -R "$GITHUB_REPOSITORY" --attach "$f" --body "attach probe for $f" 2>&1); then
+              echo "$f: ok: $out" | tee -a "$GITHUB_STEP_SUMMARY"
+            else
+              echo "$f: failed: $out" | tee -a "$GITHUB_STEP_SUMMARY"
+            fi
+          done
