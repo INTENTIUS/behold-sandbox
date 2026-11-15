@@ -18,7 +18,7 @@ resource "random_password" "db" {
 
 resource "null_resource" "database" {
   triggers = {
-    engine = "postgres"
+    engine = "mysql"
   }
 }
 

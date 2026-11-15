@@ -24,14 +24,14 @@ resource "random_id" "suffix" {
 resource "null_resource" "network" {
   triggers = {
     name = random_pet.site.id
-    cidr = "10.0.0.0/16"
+    cidr = "10.0.0.0/12"
   }
 }
 
 resource "null_resource" "subnet_a" {
   triggers = {
     network = null_resource.network.id
-    cidr    = "10.0.1.0/24"
+    cidr    = "10.0.4.0/24"
   }
 }
 
