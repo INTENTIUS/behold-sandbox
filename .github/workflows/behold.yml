@@ -9,4 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          fetch-depth: 0
+      - uses: INTENTIUS/behold-action@main
+        with:
           behold-version: 0.32.0
