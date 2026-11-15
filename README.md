@@ -10,3 +10,5 @@ A test repository for [behold](https://github.com/INTENTIUS/behold)'s pull reque
 - `.github/workflows/limits.yml` and `scripts/gen-mermaid.mjs` measure what GitHub renders and accepts: Mermaid size in a comment and a job summary, the comment length limit, and image attachment with a workflow token.
 
 Pull requests here change one or two resources on purpose. Their comments and runs are the evidence recorded on the behold issues that name this repository.
+
+The pull request from branch `limits-scratch` only receives the test comments of the limits workflow.
