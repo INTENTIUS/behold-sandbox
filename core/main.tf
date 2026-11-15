@@ -24,7 +24,7 @@ resource "random_id" "suffix" {
 resource "null_resource" "network" {
   triggers = {
     name = random_pet.site.id
-    cidr = "10.0.0.0/16"
+    cidr = "10.0.0.0/12"
   }
 }
 
