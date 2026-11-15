@@ -10,6 +10,6 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: INTENTIUS/behold-action@main
+      - uses: INTENTIUS/behold-action@v1
         with:
           behold-version: 0.32.0

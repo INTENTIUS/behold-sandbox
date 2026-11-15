@@ -12,13 +12,14 @@ variable "replicas" {
 }
 
 resource "random_password" "db" {
-  length  = 20
+  length  = 24
   special = false
 }
 
 resource "null_resource" "database" {
   triggers = {
     engine = "mysql"
+    tier   = "small"
   }
 }
 
