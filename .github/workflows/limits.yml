@@ -101,3 +101,51 @@ jobs:
               echo "$f: failed: $out" | tee -a "$GITHUB_STEP_SUMMARY"
             fi
           done
+
+  comment-size-search:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Find the largest accepted comment body
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ inputs.pr }}
+        run: |
+          set -u
+          try() {
+            n=$1
+            node -e 'const n=Number(process.argv[1]);const head="size search "+n+"\n";process.stdout.write(head+"x".repeat(n-head.length))' "$n" > b.txt
+            if out=$(gh api "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" -F body=@b.txt 2>&1); then echo "$n accepted" | tee -a "$GITHUB_STEP_SUMMARY"; return 0
+            else echo "$n refused: $out" | tee -a "$GITHUB_STEP_SUMMARY"; return 1; fi
+          }
+          lo=65537; hi=0
+          for n in 70000 100000 131072 262144 524288; do
+            if try $n; then lo=$n; else hi=$n; break; fi
+          done
+          if [ "$hi" -gt 0 ]; then
+            while [ $((hi - lo)) -gt 1 ]; do
+              mid=$(( (lo + hi) / 2 ))
+              if try $mid; then lo=$mid; else hi=$mid; fi
+            done
+          fi
+          echo "largest accepted: $lo, smallest refused: $hi" | tee -a "$GITHUB_STEP_SUMMARY"
+
+  attach-contents-write:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Try gh pr comment --attach with contents write added
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ inputs.pr }}
+        run: |
+          set -u
+          echo "gh version: $(gh --version | head -1)" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="40"><rect width="120" height="40" fill="#7c3aed"/></svg>' > probe.svg
+          if out=$(gh pr comment "$PR" -R "$GITHUB_REPOSITORY" --attach probe.svg --body "attach probe with contents write" 2>&1); then
+            echo "with contents: write: ok: $out" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "with contents: write: failed: $out" | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
